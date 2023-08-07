@@ -56,8 +56,12 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
   geometry_msgs::msg::TwistStamped cmd_vel;
 
   auto goal = pickGoal(lookahead_, pose.pose);
-  // #1 - Check if it's the final goal and if we are arrived to the end-goal
 
+  // Compute the the error between the current pose and the goal
+  auto transl_error = computeTranslationError(pose.pose, goal);
+
+
+  // #1 - Check if it's the final goal and if we are arrived to the end-goal
   if (false){
 
     RCLCPP_INFO_STREAM_ONCE(logger_, "Reached End-goal position - Start rotating...");
@@ -65,17 +69,23 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
   }
   else{
   
+    // Compute errors between the current and goal orientation
+    auto heading_error = computeHeadingError(pose.pose, goal);
+
     // #2 - Do I need to rotate?
 
-    if (true){
+    if (fabs(heading_error) >= angular_tolerance_){
 
       RCLCPP_DEBUG_STREAM(logger_, "Rotate with velocity");
+      
+      cmd_vel.twist.angular.z = 0.1;
 
     }else{
     
       // #3 - Do I need to translate?
       RCLCPP_DEBUG_STREAM(logger_, "Translate with velocity");
 
+      cmd_vel.twist.linear.x = 0.1;
     }
   }
 
@@ -100,6 +110,31 @@ geometry_msgs::msg::Pose DexController::pickGoal(const double lookahead, const g
                         return sqrt(pow(cx - gx, 2) + pow(cy - gy, 2)) <= lookahead;
                       })->pose;
  
+}
+
+double DexController::computeHeadingError(const geometry_msgs::msg::Pose & current_pose, const geometry_msgs::msg::Pose & goal_pose){
+
+  // Transform rotation to quaternion and obtain current heading
+  tf2::Quaternion q_curr(current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);
+  const auto current_heading = q_curr.getAngle() * q_curr.getAxis().z();
+
+  // Compute errors between the current and goal position
+  const auto dx = goal_pose.position.x - current_pose.position.x;
+  const auto dy = goal_pose.position.y - current_pose.position.y;
+
+  // Compute angle for the desired heading
+  return std::atan2(dy, dx) - current_heading;
+
+}
+
+double DexController::computeTranslationError(const geometry_msgs::msg::Pose & current_pose, const geometry_msgs::msg::Pose & goal_pose){
+
+  // Compute errors between the current and goal position
+  const auto dx = goal_pose.position.x - current_pose.position.x;
+  const auto dy = goal_pose.position.y - current_pose.position.y;
+
+  return sqrt(pow(dx, 2) + pow(dy, 2));
+
 }
 
 

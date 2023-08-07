@@ -100,6 +100,20 @@ public:
    */
   geometry_msgs::msg::Pose pickGoal(const double lookahead, const geometry_msgs::msg::Pose & current_pose);
 
+  /**
+   * @brief Computes the error in translation from the target
+   * @param current_pose of the robot
+   * @param goal_pose to reach
+  */
+  double computeTranslationError(const geometry_msgs::msg::Pose & current_pose, const geometry_msgs::msg::Pose & goal_pose);
+  
+  /**
+   * @brief Computes the error in heading from the target
+   * @param current_pose of the robot
+   * @param goal_pose to reach
+  */
+  double computeHeadingError(const geometry_msgs::msg::Pose & current_pose, const geometry_msgs::msg::Pose & goal_pose);
+   
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("DexController")};
   nav_msgs::msg::Path global_plan_;
