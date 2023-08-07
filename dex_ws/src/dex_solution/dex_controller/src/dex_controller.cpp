@@ -78,9 +78,6 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
     
     cmd_vel.twist.angular.z = PID(endgoal_heading_error, angular_tolerance_, kp_angular_, angular_max_velocity_);
 
-    RCLCPP_INFO_STREAM(logger_, "Error " << endgoal_heading_error);
-    RCLCPP_INFO_STREAM(logger_, "CMD " << cmd_vel.twist.angular.z);
-
   }
   else{
   
@@ -91,17 +88,16 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
 
     if (fabs(heading_error) >= angular_tolerance_){
 
-      RCLCPP_INFO_STREAM(logger_, "Rotate with velocity " << heading_error);
+      RCLCPP_DEBUG_STREAM(logger_, "Rotate with velocity " << heading_error);
       
       cmd_vel.twist.angular.z = PID(heading_error, angular_tolerance_, kp_angular_, angular_max_velocity_);
 
     }else{
     
       // #3 - Do I need to translate?
-      RCLCPP_INFO_STREAM(logger_, "Translate with velocity" << transl_error);
+      RCLCPP_DEBUG_STREAM(logger_, "Translate with velocity" << transl_error);
 
       cmd_vel.twist.linear.x = PID(transl_error, linear_tolerance_, kp_linear_, linear_max_velocity_);
-      RCLCPP_INFO_STREAM(logger_, cmd_vel.twist.linear.x);
     }
   }
     
