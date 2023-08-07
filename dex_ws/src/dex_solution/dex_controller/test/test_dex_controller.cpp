@@ -29,7 +29,12 @@ TEST(DexControllerTest, pickGoal) {
 
   auto goal = dxc.pickGoal(lookahead, p);
 
-  EXPECT_NEAR(goal.position.x, 1.1, 1e-5);
+  EXPECT_NEAR(goal.position.x, 1.0, 1e-5);
+
+  lookahead = 3.0;
+  goal = dxc.pickGoal(lookahead, p);
+
+  EXPECT_NEAR(goal.position.x, 2.0, 1e-5);
 }
 
 TEST(DexControllerTest, computeTranslError) {
@@ -77,10 +82,12 @@ TEST(DexControllerTest, computeEGHeadingError) {
   pose1.position.x = 0;
   pose1.position.y = 0;
   pose1.orientation.z = 0;
+  pose1.orientation.w = 1;
   
   pose2.position.x = 0;
   pose2.position.y = 0;
-  pose2.orientation.z = M_PI / 2.0;
+  pose2.orientation.z = 0.7071068;
+  pose2.orientation.w = 0.7071068 ;
 
   auto error = dxc.computeEndGoalHeadingError(pose1, pose2);
 

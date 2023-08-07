@@ -183,12 +183,13 @@ double DexController::computeEndGoalHeadingError(const geometry_msgs::msg::Pose 
   tf2::Quaternion q_goal(goal_pose.orientation.x, goal_pose.orientation.y, goal_pose.orientation.z, goal_pose.orientation.w);
   tf2::Quaternion q_curr(current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);
 
-  const auto current_heading = q_curr.getAngle() * q_curr.getAxis().z();
+  double dotProduct = q_curr.dot(q_goal);
 
-  // Difference between two quaternions
-  auto q_diff = (q_goal * q_curr.inverse()).normalize();
+  // Make sure the dot product is within the range of -1 to 1, as it may be slightly out of bounds due to numerical errors
+  dotProduct = std::clamp(dotProduct, -1.0, 1.0);
 
-  return q_diff.getAngle() * q_diff.getAxis().z() - current_heading;
+  // Compute the angle between the quaternions in radians
+  return 2.0 * std::acos(dotProduct);
 
 }
 
