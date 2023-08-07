@@ -12,6 +12,7 @@
 #include "pluginlib/class_list_macros.hpp"
 #include "pluginlib/class_loader.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include <nav2_util/node_utils.hpp>
 
 namespace dex_controller
 {
@@ -102,6 +103,14 @@ public:
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("DexController")};
   nav_msgs::msg::Path global_plan_;
+
+  // External params
+  std::string plugin_name_;
+  double angular_max_velocity_, linear_max_velocity_;
+  double linear_tolerance_, angular_tolerance_;
+  double kp_angular_, kp_linear_;
+  double lookahead_;
+  
 
 
   std::mutex mutex_;

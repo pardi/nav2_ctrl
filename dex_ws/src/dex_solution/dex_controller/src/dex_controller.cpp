@@ -12,6 +12,35 @@ void DexController::configure(
   const std::shared_ptr<tf2_ros::Buffer> tf,
   const std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros)
 {
+  plugin_name_ = name;
+  
+  auto node = parent.lock();
+  
+  nav2_util::declare_parameter_if_not_declared(
+    node, plugin_name_ + ".ang_max_vel", rclcpp::ParameterValue(M_PI / 2));  
+  nav2_util::declare_parameter_if_not_declared(
+    node, plugin_name_ + ".lin_max_vel", rclcpp::ParameterValue(M_PI / 2));  
+  nav2_util::declare_parameter_if_not_declared(
+    node, plugin_name_ + ".lookahead", rclcpp::ParameterValue(0.5));    
+  nav2_util::declare_parameter_if_not_declared(
+    node, plugin_name_ + ".lin_tol", rclcpp::ParameterValue(1e-1));
+  nav2_util::declare_parameter_if_not_declared(
+    node, plugin_name_ + ".ang_tol", rclcpp::ParameterValue(1e-1));
+  nav2_util::declare_parameter_if_not_declared(
+    node, plugin_name_ + ".kp_ang", rclcpp::ParameterValue(5.0));
+  nav2_util::declare_parameter_if_not_declared(
+    node, plugin_name_ + ".kp_lin", rclcpp::ParameterValue(5.0));    
+       
+  
+  node->get_parameter(plugin_name_ + ".ang_max_vel", angular_max_velocity_);
+  node->get_parameter(plugin_name_ + ".lin_max_vel", linear_max_velocity_);
+  node->get_parameter(plugin_name_ + ".lookahead", lookahead_);
+  node->get_parameter(plugin_name_ + ".lin_tol", linear_tolerance_);
+  node->get_parameter(plugin_name_ + ".ang_tol", angular_tolerance_);
+  node->get_parameter(plugin_name_ + ".kp_ang", kp_angular_);
+  node->get_parameter(plugin_name_ + ".kp_lin", kp_linear_);
+  node->get_parameter(plugin_name_ + ".lookahead", lookahead_);
+  
 }
 
 void DexController::cleanup() {}
@@ -26,13 +55,14 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
 {
   geometry_msgs::msg::TwistStamped cmd_vel;
 
-  const double lookahead = 0.5;
+  // const double lookahead = 0.5;
 
-  auto goal = pickGoal(lookahead, pose.pose);
+  // auto goal = pickGoal(lookahead, pose.pose);
+  // RCLCPP_INFO_STREAM(logger_, "test: " << goal.position.x << " " << lookahead_);
+  RCLCPP_INFO_STREAM(logger_, "test: " << lookahead_ << " " << angular_max_velocity_ << " " << linear_max_velocity_);
+  RCLCPP_INFO_STREAM(logger_, "test: " << linear_tolerance_ << " " << angular_tolerance_ << " " << kp_angular_ << " " << kp_linear_);
   
-  RCLCPP_INFO_STREAM(logger_, "test: " << goal.position.x);
-
-  
+  cmd_vel.twist.angular.x = 0.1;
   return cmd_vel;
 }
 
