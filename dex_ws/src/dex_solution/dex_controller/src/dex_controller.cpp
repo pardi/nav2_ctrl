@@ -31,7 +31,9 @@ void DexController::configure(
   nav2_util::declare_parameter_if_not_declared(
     node, plugin_name_ + ".kp_lin", rclcpp::ParameterValue(5.0));    
   nav2_util::declare_parameter_if_not_declared(
-    node, plugin_name_ + ".granularity", rclcpp::ParameterValue(100));    
+    node, plugin_name_ + ".granularity", rclcpp::ParameterValue(100));   
+  nav2_util::declare_parameter_if_not_declared(
+    node, plugin_name_ + ".stuck_thr", rclcpp::ParameterValue(0.01));    
        
   
   node->get_parameter(plugin_name_ + ".ang_max_vel", angular_max_velocity_);
@@ -43,7 +45,7 @@ void DexController::configure(
   node->get_parameter(plugin_name_ + ".kp_lin", kp_linear_);
   node->get_parameter(plugin_name_ + ".lookahead", lookahead_);
   node->get_parameter(plugin_name_ + ".granularity", granularity_);
-
+  node->get_parameter(plugin_name_ + ".stuck_thr", stuck_threshold_);
 
   costmap_ = costmap_ros;
   collision_checker_ = std::make_unique<nav2_costmap_2d::
@@ -58,10 +60,20 @@ void DexController::activate() {}
 void DexController::deactivate() {}
 
 geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
-  const geometry_msgs::msg::PoseStamped & pose, const geometry_msgs::msg::Twist & /*speed*/,
+  const geometry_msgs::msg::PoseStamped & pose, const geometry_msgs::msg::Twist & velocity,
   nav2_core::GoalChecker * /*goal_checker*/)
 {
+
   geometry_msgs::msg::TwistStamped cmd_vel;
+
+  // Is the robot stuck?
+
+  // Check state
+  if (isStuck(velocity)){
+    RCLCPP_INFO_STREAM(logger_, "Robot is stuck!");
+
+    return cmd_vel;
+  }
 
   auto goal = pickGoal(lookahead_, pose.pose);
 
@@ -183,9 +195,16 @@ double DexController::computeEndGoalHeadingError(const geometry_msgs::msg::Pose 
 
   // Make sure the dot product is within the range of -1 to 1, as it may be slightly out of bounds due to numerical errors
   dotProduct = std::clamp(dotProduct, -1.0, 1.0);
-
   // Compute the angle between the quaternions in radians
-  return 2.0 * std::acos(dotProduct);
+  auto angle = 2.0 * std::acos(dotProduct);
+  
+  if (angle > M_PI) {
+    angle = 2.0 * M_PI - angle;
+  }
+
+  RCLCPP_INFO_STREAM(logger_, "angle: " << angle);
+
+  return angle;
 
 }
 
@@ -256,6 +275,60 @@ bool DexController::checkCollision(const double x, const double y, const double 
   }
 
   return true;
+}
+
+bool DexController::isStuck(const geometry_msgs::msg::Twist & velocity){
+  
+  // Store the current twist
+  if (motion_history_.size() > stuck_deque_size_){
+    auto oldest_vel = motion_history_[0];
+    motion_history_.pop_front();
+
+    average_history_motion_.linear.x += (velocity.linear.x - oldest_vel.linear.x) / stuck_deque_size_;
+    average_history_motion_.linear.y += (velocity.linear.y - oldest_vel.linear.y) / stuck_deque_size_;
+    average_history_motion_.linear.z += (velocity.linear.z - oldest_vel.linear.z) / stuck_deque_size_;
+    average_history_motion_.angular.x += (velocity.angular.x - oldest_vel.angular.z) / stuck_deque_size_;
+    average_history_motion_.angular.y += (velocity.angular.y - oldest_vel.angular.y) / stuck_deque_size_;
+    average_history_motion_.angular.z += (velocity.angular.z - oldest_vel.angular.z) / stuck_deque_size_;
+      
+    auto norm = std::sqrt( std::pow(average_history_motion_.linear.x, 2) +
+                          std::pow(average_history_motion_.linear.y, 2) + 
+                          std::pow(average_history_motion_.linear.z, 2) + 
+                          std::pow(average_history_motion_.angular.x, 2) + 
+                          std::pow(average_history_motion_.angular.y, 2) + 
+                          std::pow(average_history_motion_.angular.z, 2));
+    
+    if (norm < stuck_threshold_){
+      return true;
+    }
+  }else{
+
+    if (!motion_history_.empty()){
+
+      // Average of the array before it's full
+      for (const auto& vel: motion_history_){
+        average_history_motion_.linear.x += vel.linear.x;
+        average_history_motion_.linear.y += vel.linear.y;
+        average_history_motion_.linear.z += vel.linear.z;
+        average_history_motion_.angular.x += vel.angular.x;
+        average_history_motion_.angular.y += vel.angular.y;
+        average_history_motion_.angular.z += vel.angular.z;
+      }
+
+      average_history_motion_.linear.x /= motion_history_.size();
+      average_history_motion_.linear.y /= motion_history_.size();
+      average_history_motion_.linear.z /= motion_history_.size();
+      average_history_motion_.angular.x /= motion_history_.size();
+      average_history_motion_.angular.y /= motion_history_.size();
+      average_history_motion_.angular.z /= motion_history_.size();
+    }
+
+  }
+
+
+  motion_history_.push_back(velocity);
+
+  return false;
 }
 
 

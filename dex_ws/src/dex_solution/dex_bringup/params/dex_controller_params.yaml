@@ -14,3 +14,4 @@ controller_server:
       kp_ang: 5.0
       kp_lin: 5.0
       granularity: 100
+      stuck_thr: 0.01

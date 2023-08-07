@@ -14,6 +14,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include <nav2_util/node_utils.hpp>
 #include <nav2_costmap_2d/footprint_collision_checker.hpp>
+#include <deque>
 
 namespace dex_controller
 {
@@ -144,6 +145,12 @@ public:
    * @param cmd_vel to execute
   */
   bool isCollisionFree(const geometry_msgs::msg::Pose & initial_pose, const geometry_msgs::msg::Pose & goal_pose, const geometry_msgs::msg::TwistStamped & cmd_vel);
+  
+  /**
+   * @brief Checks whether the robot is stuck in a position
+   * @param velocity of the robot
+  */
+  bool isStuck(const geometry_msgs::msg::Twist & velocity);
 
 private:
 
@@ -168,6 +175,11 @@ protected:
   double kp_angular_, kp_linear_;
   double lookahead_;
   int granularity_;
+  double stuck_threshold_;
+  const size_t stuck_deque_size_{10};
+
+  std::deque<geometry_msgs::msg::Twist> motion_history_;
+  geometry_msgs::msg::Twist average_history_motion_;
   
   std::mutex mutex_;
 };

@@ -22,8 +22,8 @@ public:
 
   }
   
-  void setCostMap(std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap){
-    costmap_ = costmap;
+  void setMotionHistoryTh(const double threashold){
+    stuck_threshold_ = threashold;
   }
 
 };
@@ -170,3 +170,25 @@ TEST(DexControllerTest, isEG) {
   EXPECT_TRUE(status);
 }
 
+TEST(DexControllerTest, isStuck) {
+
+  auto dxc = std::make_shared<DexControllerCls>();
+
+  geometry_msgs::msg::Twist velocity;
+  dxc->setMotionHistoryTh(0.1);
+
+  bool status;
+  for (int i = 0; i < 100; ++i){
+    status = dxc->isStuck(velocity);
+  }
+  
+  EXPECT_TRUE(status);
+
+  velocity.linear.x = 10;
+
+  for (int i = 0; i < 100; ++i){
+    status = dxc->isStuck(velocity);
+  }
+  
+  EXPECT_FALSE(status);
+}
