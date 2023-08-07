@@ -40,6 +40,11 @@ void DexController::configure(
   node->get_parameter(plugin_name_ + ".kp_ang", kp_angular_);
   node->get_parameter(plugin_name_ + ".kp_lin", kp_linear_);
   node->get_parameter(plugin_name_ + ".lookahead", lookahead_);
+
+
+  costmap_ = costmap_ros;
+  collision_checker_ = std::make_unique<nav2_costmap_2d::
+      FootprintCollisionChecker<nav2_costmap_2d::Costmap2D *>>(costmap_->getCostmap());
   
 }
 
@@ -96,6 +101,10 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
     }
   }
 
+  if (!isCollisionFree(pose.pose, goal, cmd_vel)){
+    throw nav2_core::NoValidControl("Detected collision!");
+  }
+    
   cmd_vel.header.frame_id = pose.header.frame_id;
   return cmd_vel;
 }
@@ -187,11 +196,49 @@ bool DexController::isEndGoal(const geometry_msgs::msg::Pose & goal_pose){
 }
 
 
+bool DexController::isCollisionFree(const geometry_msgs::msg::Pose & initial_pose, const geometry_msgs::msg::Pose & goal_pose, const geometry_msgs::msg::TwistStamped & cmd_vel){
 
+  const double dt = 0.01;
+  const double sim_time = 0.00;
+  const double timeout = 100;
 
+  double x = initial_pose.position.x;
+  double y = initial_pose.position.y;
+  double theta = initial_pose.orientation.z;
 
+  while(fabs(x - goal_pose.position.x) > linear_tolerance_ && 
+        fabs(y - goal_pose.position.y) > linear_tolerance_ &&
+        fabs(theta - goal_pose.orientation.z) > angular_tolerance_ &&
+        sim_time < timeout)
+  {
+    x += cmd_vel.twist.linear.x * dt;
+    y += cmd_vel.twist.linear.y * dt;
+    theta += cmd_vel.twist.angular.z * dt;
 
+    using namespace nav2_costmap_2d;  // NOLINT
+    double footprint_cost = collision_checker_->footprintCostAtPose( x, y, theta, costmap_->getRobotFootprint());
 
+    if (footprint_cost == static_cast<double>(NO_INFORMATION) && costmap_->getLayeredCostmap()->isTrackingUnknown())
+    {
+      RCLCPP_INFO_STREAM(logger_, "Possible collision ahead!");
+
+      return false;
+    }
+
+    if (footprint_cost >= static_cast<double>(LETHAL_OBSTACLE)) {
+      RCLCPP_INFO_STREAM(logger_, "Lethal collision!");
+
+      return false;
+    }
+  }
+
+  if (sim_time > timeout){
+    return false;
+  }
+
+  return true;
+
+}
 
 
 void DexController::setSpeedLimit(const double & speed_limit, const bool & percentage) {}
