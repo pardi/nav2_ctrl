@@ -25,3 +25,9 @@ Simply,
 - **kp_ang** -> proportional gain for the angular controller
 - **kp_lin** -> proportional gain for the linear controller
 - **granularity** -> granularity of the collision detection algorithm
+
+
+# Extra notes
+- ADE: The provided ADE tried to use the GPU on the pc, however, the pc is not setup properly with the nvidia-drivers. Therefore, we selected the next best thing, which is the use of the provided Dockerfile for the ADE. 
+
+- Testing: the testing are properly compiling and running fine, but `colcon test` doesn't properly report them on my machine. 
