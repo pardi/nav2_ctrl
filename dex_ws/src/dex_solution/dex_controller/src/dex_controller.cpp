@@ -78,14 +78,14 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
 
       RCLCPP_DEBUG_STREAM(logger_, "Rotate with velocity");
       
-      cmd_vel.twist.angular.z = 0.1;
+      cmd_vel.twist.angular.z = PID(heading_error, angular_tolerance_, kp_angular_, angular_max_velocity_);
 
     }else{
     
       // #3 - Do I need to translate?
       RCLCPP_DEBUG_STREAM(logger_, "Translate with velocity");
 
-      cmd_vel.twist.linear.x = 0.1;
+      cmd_vel.twist.linear.x = PID(transl_error, linear_tolerance_, kp_linear_, linear_max_velocity_);
     }
   }
 
@@ -137,7 +137,22 @@ double DexController::computeTranslationError(const geometry_msgs::msg::Pose & c
 
 }
 
+double DexController::PID(const double error, const double tolerance, const double kp, const double max_vel){
+  
+  double ctrl_cmd = 0.0;
+  
+  if (fabs(error) > tolerance){
 
+    // Limit the maximum velocity simmetrically
+    ctrl_cmd = std::clamp(kp * error, -max_vel, max_vel);
+
+    RCLCPP_INFO_STREAM(logger_, "PID cmd: " << error << " " << ctrl_cmd);
+      
+  }
+
+  return ctrl_cmd;
+
+}
 void DexController::setSpeedLimit(const double & speed_limit, const bool & percentage) {}
 
 }  // namespace dex_controller

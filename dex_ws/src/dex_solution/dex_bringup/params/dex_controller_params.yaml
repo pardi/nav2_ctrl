@@ -7,9 +7,9 @@ controller_server:
     FollowPath:
       plugin: "dex_controller::DexController"
       ang_max_vel: 1.5705
-      lin_max_vel: 0.3
-      lookahead: 0.25
-      ang_tol: 0.4
-      lin_tol: 0.23
-      kp_ang: 4.0
-      kp_lin: 10.0
+      lin_max_vel: 1.0
+      lookahead: 0.3
+      ang_tol: 0.1
+      lin_tol: 0.1
+      kp_ang: 5.0
+      kp_lin: 5.0

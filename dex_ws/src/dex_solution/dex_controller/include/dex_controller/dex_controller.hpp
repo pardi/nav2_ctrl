@@ -114,6 +114,16 @@ public:
   */
   double computeHeadingError(const geometry_msgs::msg::Pose & current_pose, const geometry_msgs::msg::Pose & goal_pose);
    
+  /**
+   * @brief PID controller for moving the robot
+   * @param error of the controller
+   * @param tolerance of the error
+   * @param kp proportional gain 
+   * @param max_vel allowed for the controller
+  */
+  double PID(const double error, const double tolerance, const double kp, const double max_vel);
+
+
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("DexController")};
   nav_msgs::msg::Path global_plan_;
