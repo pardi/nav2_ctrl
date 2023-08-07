@@ -102,7 +102,11 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
   }
 
   if (!isCollisionFree(pose.pose, goal, cmd_vel)){
-    throw nav2_core::NoValidControl("Detected collision!");
+    RCLCPP_INFO_STREAM(logger_, "Detected collision!" << transl_error);
+    // Clean command
+    cmd_vel.twist.angular.z = 0;
+    cmd_vel.twist.linear.x = 0;
+    cmd_vel.twist.linear.y = 0;
   }
     
   cmd_vel.header.frame_id = pose.header.frame_id;

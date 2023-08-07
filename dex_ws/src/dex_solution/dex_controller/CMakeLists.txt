@@ -26,6 +26,7 @@ set(dependencies
     rclcpp
     rclcpp_lifecycle
     geometry_msgs
+    nav2_costmap_2d
     pluginlib
     nav_msgs
     nav2_core
