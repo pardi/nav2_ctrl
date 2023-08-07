@@ -55,14 +55,31 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
 {
   geometry_msgs::msg::TwistStamped cmd_vel;
 
-  // const double lookahead = 0.5;
+  auto goal = pickGoal(lookahead_, pose.pose);
+  // #1 - Check if it's the final goal and if we are arrived to the end-goal
 
-  // auto goal = pickGoal(lookahead, pose.pose);
-  // RCLCPP_INFO_STREAM(logger_, "test: " << goal.position.x << " " << lookahead_);
-  RCLCPP_INFO_STREAM(logger_, "test: " << lookahead_ << " " << angular_max_velocity_ << " " << linear_max_velocity_);
-  RCLCPP_INFO_STREAM(logger_, "test: " << linear_tolerance_ << " " << angular_tolerance_ << " " << kp_angular_ << " " << kp_linear_);
+  if (false){
+
+    RCLCPP_INFO_STREAM_ONCE(logger_, "Reached End-goal position - Start rotating...");
+    
+  }
+  else{
   
-  cmd_vel.twist.angular.x = 0.1;
+    // #2 - Do I need to rotate?
+
+    if (true){
+
+      RCLCPP_DEBUG_STREAM(logger_, "Rotate with velocity");
+
+    }else{
+    
+      // #3 - Do I need to translate?
+      RCLCPP_DEBUG_STREAM(logger_, "Translate with velocity");
+
+    }
+  }
+
+  cmd_vel.header.frame_id = pose.header.frame_id;
   return cmd_vel;
 }
 
