@@ -13,3 +13,4 @@ controller_server:
       lin_tol: 0.1
       kp_ang: 5.0
       kp_lin: 5.0
+      granularity: 100

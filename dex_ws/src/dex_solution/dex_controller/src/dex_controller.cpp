@@ -30,6 +30,8 @@ void DexController::configure(
     node, plugin_name_ + ".kp_ang", rclcpp::ParameterValue(5.0));
   nav2_util::declare_parameter_if_not_declared(
     node, plugin_name_ + ".kp_lin", rclcpp::ParameterValue(5.0));    
+  nav2_util::declare_parameter_if_not_declared(
+    node, plugin_name_ + ".granularity", rclcpp::ParameterValue(100));    
        
   
   node->get_parameter(plugin_name_ + ".ang_max_vel", angular_max_velocity_);
@@ -40,6 +42,7 @@ void DexController::configure(
   node->get_parameter(plugin_name_ + ".kp_ang", kp_angular_);
   node->get_parameter(plugin_name_ + ".kp_lin", kp_linear_);
   node->get_parameter(plugin_name_ + ".lookahead", lookahead_);
+  node->get_parameter(plugin_name_ + ".granularity", granularity_);
 
 
   costmap_ = costmap_ros;
@@ -88,19 +91,20 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
 
     if (fabs(heading_error) >= angular_tolerance_){
 
-      RCLCPP_DEBUG_STREAM(logger_, "Rotate with velocity " << heading_error);
+      RCLCPP_INFO_STREAM(logger_, "Rotate with velocity " << heading_error);
       
       cmd_vel.twist.angular.z = PID(heading_error, angular_tolerance_, kp_angular_, angular_max_velocity_);
 
     }else{
     
       // #3 - Do I need to translate?
-      RCLCPP_DEBUG_STREAM(logger_, "Translate with velocity" << transl_error);
+      RCLCPP_INFO_STREAM(logger_, "Translate with velocity" << transl_error);
 
       cmd_vel.twist.linear.x = PID(transl_error, linear_tolerance_, kp_linear_, linear_max_velocity_);
+      RCLCPP_INFO_STREAM(logger_, cmd_vel.twist.linear.x);
     }
   }
-
+    
   if (!isCollisionFree(pose.pose, goal, cmd_vel)){
     RCLCPP_INFO_STREAM(logger_, "Detected collision!" << transl_error);
     // Clean command
@@ -108,7 +112,7 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
     cmd_vel.twist.linear.x = 0;
     cmd_vel.twist.linear.y = 0;
   }
-    
+  
   cmd_vel.header.frame_id = pose.header.frame_id;
   return cmd_vel;
 }
@@ -202,46 +206,57 @@ bool DexController::isEndGoal(const geometry_msgs::msg::Pose & goal_pose){
 
 bool DexController::isCollisionFree(const geometry_msgs::msg::Pose & initial_pose, const geometry_msgs::msg::Pose & goal_pose, const geometry_msgs::msg::TwistStamped & cmd_vel){
 
-  const double dt = 0.01;
-  const double sim_time = 0.00;
-  const double timeout = 100;
-
+  constexpr int num_samples = granularity_;
   double x = initial_pose.position.x;
   double y = initial_pose.position.y;
   double theta = initial_pose.orientation.z;
 
-  while(fabs(x - goal_pose.position.x) > linear_tolerance_ && 
-        fabs(y - goal_pose.position.y) > linear_tolerance_ &&
-        fabs(theta - goal_pose.orientation.z) > angular_tolerance_ &&
-        sim_time < timeout)
-  {
-    x += cmd_vel.twist.linear.x * dt;
-    y += cmd_vel.twist.linear.y * dt;
-    theta += cmd_vel.twist.angular.z * dt;
+  // Split the trajectory in a number of samples
+  double dx = (goal_pose.position.x - initial_pose.position.x) / num_samples;
+  double dy = (goal_pose.position.y - initial_pose.position.y) / num_samples;;
+  double dtheta = (goal_pose.orientation.z - initial_pose.orientation.z) / num_samples;
 
-    using namespace nav2_costmap_2d;  // NOLINT
-    double footprint_cost = collision_checker_->footprintCostAtPose( x, y, theta, costmap_->getRobotFootprint());
-
-    if (footprint_cost == static_cast<double>(NO_INFORMATION) && costmap_->getLayeredCostmap()->isTrackingUnknown())
-    {
-      RCLCPP_INFO_STREAM(logger_, "Possible collision ahead!");
-
-      return false;
-    }
-
-    if (footprint_cost >= static_cast<double>(LETHAL_OBSTACLE)) {
-      RCLCPP_INFO_STREAM(logger_, "Lethal collision!");
-
-      return false;
+  if (cmd_vel.twist.linear.x > 0){
+    
+    for (int i = 0; i < num_samples; ++i){
+      if(!checkCollision(x + dx * i, y + dy * i, theta)){
+        return false;
+      }
     }
   }
 
-  if (sim_time > timeout){
-    return false;
+  if (cmd_vel.twist.angular.z > 0){
+    
+    for (int i = 0; i < num_samples; ++i){
+      if(!checkCollision(x, y, theta + dtheta * i)){
+        return false;
+      }
+    }
   }
 
   return true;
 
+}
+
+bool DexController::checkCollision(const double x, const double y, const double theta){
+    
+  using namespace nav2_costmap_2d;  // NOLINT
+  double footprint_cost = collision_checker_->footprintCostAtPose( x, y, theta, costmap_->getRobotFootprint());
+
+  if (footprint_cost == static_cast<double>(NO_INFORMATION) && costmap_->getLayeredCostmap()->isTrackingUnknown())
+  {
+    RCLCPP_INFO_STREAM(logger_, "Possible collision ahead!");
+
+    return false;
+  }
+
+  if (footprint_cost >= static_cast<double>(LETHAL_OBSTACLE)) {
+    RCLCPP_INFO_STREAM(logger_, "Lethal collision!");
+
+    return false;
+  }
+
+  return true;
 }
 
 

@@ -145,6 +145,15 @@ public:
   */
   bool isCollisionFree(const geometry_msgs::msg::Pose & initial_pose, const geometry_msgs::msg::Pose & goal_pose, const geometry_msgs::msg::TwistStamped & cmd_vel);
 
+private:
+
+  /**
+   * @brief Checks the collision on the costmap
+   * @param x position of the robot
+   * @param y position of the robot
+   * @param theta orientatino on z-axis of the robot
+  */
+  bool checkCollision(const double x, const double y, const double theta);
 
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("DexController")};
@@ -158,6 +167,7 @@ protected:
   double linear_tolerance_, angular_tolerance_;
   double kp_angular_, kp_linear_;
   double lookahead_;
+  int granularity_;
   
   std::mutex mutex_;
 };
