@@ -9,7 +9,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
-find_package(nav2_costmap_2d REQUIRED)
+find_package(ament_cmake_gtest REQUIRED)
 
 nav2_package()
 set(CMAKE_CXX_STANDARD 17)
@@ -26,7 +26,6 @@ set(dependencies
     rclcpp
     rclcpp_lifecycle
     geometry_msgs
-    nav2_costmap_2d
     pluginlib
     nav_msgs
     nav2_core
@@ -34,12 +33,14 @@ set(dependencies
 
 add_library(dex_controller SHARED
     src/dex_controller.cpp)
+
 ament_target_dependencies(dex_controller
     rclcpp
     geometry_msgs
     pluginlib
     nav_msgs
     nav2_core
+    ament_cmake_gtest
 )
 
 install(TARGETS dex_controller
@@ -56,6 +57,7 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   set(ament_cmake_copyright_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
+  add_subdirectory(test)
 endif()
 
 ament_export_include_directories(include)

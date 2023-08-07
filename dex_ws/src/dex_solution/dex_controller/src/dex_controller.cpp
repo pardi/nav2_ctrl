@@ -206,7 +206,7 @@ bool DexController::isEndGoal(const geometry_msgs::msg::Pose & goal_pose){
 
 bool DexController::isCollisionFree(const geometry_msgs::msg::Pose & initial_pose, const geometry_msgs::msg::Pose & goal_pose, const geometry_msgs::msg::TwistStamped & cmd_vel){
 
-  constexpr int num_samples = granularity_;
+  int num_samples = granularity_;
   double x = initial_pose.position.x;
   double y = initial_pose.position.y;
   double theta = initial_pose.orientation.z;

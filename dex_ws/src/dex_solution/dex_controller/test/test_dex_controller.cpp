@@ -1,4 +1,9 @@
 #include <gtest/gtest.h>
+#include <rclcpp/rclcpp.hpp>
+#include <dex_controller/dex_controller.hpp>
+#include <nav_msgs/msg/path.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 
 TEST(MyNodeTest, TestAddition) {
 
@@ -8,69 +13,144 @@ TEST(MyNodeTest, TestAddition) {
 }
 
 
-//   /**
-//    * @brief Selects the next local goal from the global plan
-//    * @param lookahead Defines the distance between the selected goal and the current position
-//    * @param current_pose Defines the current pose of the robot
-//    */
-//   geometry_msgs::msg::Pose pickGoal(const double lookahead, const geometry_msgs::msg::Pose & current_pose);
+TEST(DexControllerTest, pickGoal) {
 
-//   /**
-//    * @brief Computes the error in translation from the target
-//    * @param current_pose of the robot
-//    * @param goal_pose to reach
-//   */
-//   double computeTranslationError(const geometry_msgs::msg::Pose & current_pose, const geometry_msgs::msg::Pose & goal_pose);
+  dex_controller::DexController dxc;
+
+  nav_msgs::msg::Path path;
+  geometry_msgs::msg::PoseStamped ps;
+
+  ps.pose.position.x = 0;
+  path.poses.push_back(ps);
+  ps.pose.position.x = 1;
+  path.poses.push_back(ps);
+  ps.pose.position.x = 2;
+  path.poses.push_back(ps);
+
+  geometry_msgs::msg::Pose p;
+  p.position.x = 0;
+  p.position.y = 0;
+  p.orientation.z = 0;
   
-//   /**
-//    * @brief Computes the error in heading from the target
-//    * @param current_pose of the robot
-//    * @param goal_pose to reach
-//   */
-//   double computeHeadingError(const geometry_msgs::msg::Pose & current_pose, const geometry_msgs::msg::Pose & goal_pose);
+  dxc.setPlan(path);
+  double lookahead = 1.1;
+
+  auto goal = dxc.pickGoal(lookahead, p);
+
+  EXPECT_NEAR(goal.position.x, 1.1, 1e-5);
+}
+
+TEST(DexControllerTest, computeTranslError) {
+
+  dex_controller::DexController dxc;
+
+  geometry_msgs::msg::Pose pose1, pose2;
+  pose1.position.x = 0;
+  pose1.position.y = 0;
+  pose1.orientation.z = 0;
   
-//   /**
-//    * @brief Computes the error in heading from the end_goal target
-//    * @param current_pose of the robot
-//    * @param goal_pose to reach
-//   */
-//   double computeEndGoalHeadingError(const geometry_msgs::msg::Pose & current_pose, const geometry_msgs::msg::Pose & goal_pose);
+  pose2.position.x = 10;
+  pose2.position.y = 0;
+  pose2.orientation.z = 0;
 
-//   /**
-//    * @brief PID controller for moving the robot
-//    * @param error of the controller
-//    * @param tolerance of the error
-//    * @param kp proportional gain 
-//    * @param max_vel allowed for the controller
-//   */
-//   double PID(const double error, const double tolerance, const double kp, const double max_vel);
+  auto error = dxc.computeTranslationError(pose1, pose2);
 
-//   /**
-//    * @brief Checkes whether the goal_pose is the end of the global path
-//    * @param goal_pose to reach
-//   */
-//   bool isEndGoal(const geometry_msgs::msg::Pose & goal_pose);
+  EXPECT_NEAR(error, 10, 1e-5);
+}
 
-//   /**
-//    * @brief Checkes whether the current controller will collide with the environment
-//    * @param initial_pose of the robot
-//    * @param goal_pose of the robot
-//    * @param cmd_vel to execute
-//   */
-//   bool isCollisionFree(const geometry_msgs::msg::Pose & initial_pose, const geometry_msgs::msg::Pose & goal_pose, const geometry_msgs::msg::TwistStamped & cmd_vel);
+TEST(DexControllerTest, computeHeadingError) {
 
-// private:
+  dex_controller::DexController dxc;
 
-//   /**
-//    * @brief Checks the collision on the costmap
-//    * @param x position of the robot
-//    * @param y position of the robot
-//    * @param theta orientatino on z-axis of the robot
-//   */
-//   bool checkCollision(const double x, const double y, const double theta);
+  geometry_msgs::msg::Pose pose1, pose2;
+  pose1.position.x = 0;
+  pose1.position.y = 0;
+  pose1.orientation.z = 0;
+  
+  pose2.position.x = 1;
+  pose2.position.y = 1;
+  pose2.orientation.z = M_PI / 4.0;
 
+  auto error = dxc.computeHeadingError(pose1, pose2);
+
+  EXPECT_NEAR(error, M_PI / 4.0, 1e-5);
+}
+
+
+TEST(DexControllerTest, computeEGHeadingError) {
+
+  dex_controller::DexController dxc;
+
+  geometry_msgs::msg::Pose pose1, pose2;
+  pose1.position.x = 0;
+  pose1.position.y = 0;
+  pose1.orientation.z = 0;
+  
+  pose2.position.x = 0;
+  pose2.position.y = 0;
+  pose2.orientation.z = M_PI / 2.0;
+
+  auto error = dxc.computeEndGoalHeadingError(pose1, pose2);
+
+  EXPECT_NEAR(error, M_PI / 2.0, 1e-5);
+}
+
+
+TEST(DexControllerTest, pid) {
+
+  dex_controller::DexController dxc;
+
+  double error = 1;
+  double tolerance = 0.1;
+  double kp = 1;
+  double max_vel = 10;
+
+  auto ctrl = dxc.PID(error, tolerance, kp, max_vel);
+
+  EXPECT_NEAR(ctrl, 1, 1e-5);
+
+  error = 0.01;
+  ctrl = dxc.PID(error, tolerance, kp, max_vel);
+
+  EXPECT_NEAR(ctrl, 0, 1e-5);
+
+  error = 20;
+  ctrl = dxc.PID(error, tolerance, kp, max_vel);
+
+  EXPECT_NEAR(ctrl, 10, 1e-5);
+}
+
+
+TEST(DexControllerTest, isEG) {
+
+  dex_controller::DexController dxc;
+
+  nav_msgs::msg::Path path;
+  geometry_msgs::msg::PoseStamped ps;
+
+  ps.pose.position.x = 0;
+  path.poses.push_back(ps);
+  ps.pose.position.x = 1;
+  path.poses.push_back(ps);
+  ps.pose.position.x = 2;
+  path.poses.push_back(ps);
+
+  geometry_msgs::msg::Pose goal_pose;
+  goal_pose.position.x = 2;
+  goal_pose.position.y = 0;
+  goal_pose.orientation.z = 0;
+
+  dxc.setPlan(path);
+
+  auto status = dxc.isEndGoal(goal_pose);
+
+  EXPECT_TRUE(status);
+}
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+
+
+// bool isCollisionFree(const geometry_msgs::msg::Pose & initial_pose, const geometry_msgs::msg::Pose & goal_pose, const geometry_msgs::msg::TwistStamped & cmd_vel);
