@@ -60,12 +60,19 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
   // Compute the the error between the current pose and the goal
   auto transl_error = computeTranslationError(pose.pose, goal);
 
-
   // #1 - Check if it's the final goal and if we are arrived to the end-goal
-  if (false){
+  if (isEndGoal(goal) && fabs(transl_error) < linear_tolerance_){
+
+    // Compute errors between in orientation given the goal of the global plan    
+    auto endgoal_heading_error = computeEndGoalHeadingError(pose.pose, goal);
 
     RCLCPP_INFO_STREAM_ONCE(logger_, "Reached End-goal position - Start rotating...");
     
+    cmd_vel.twist.angular.z = PID(endgoal_heading_error, angular_tolerance_, kp_angular_, angular_max_velocity_);
+
+    RCLCPP_INFO_STREAM(logger_, "Error " << endgoal_heading_error);
+    RCLCPP_INFO_STREAM(logger_, "CMD " << cmd_vel.twist.angular.z);
+
   }
   else{
   
@@ -76,14 +83,14 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
 
     if (fabs(heading_error) >= angular_tolerance_){
 
-      RCLCPP_DEBUG_STREAM(logger_, "Rotate with velocity");
+      RCLCPP_DEBUG_STREAM(logger_, "Rotate with velocity " << heading_error);
       
       cmd_vel.twist.angular.z = PID(heading_error, angular_tolerance_, kp_angular_, angular_max_velocity_);
 
     }else{
     
       // #3 - Do I need to translate?
-      RCLCPP_DEBUG_STREAM(logger_, "Translate with velocity");
+      RCLCPP_DEBUG_STREAM(logger_, "Translate with velocity" << transl_error);
 
       cmd_vel.twist.linear.x = PID(transl_error, linear_tolerance_, kp_linear_, linear_max_velocity_);
     }
@@ -146,13 +153,47 @@ double DexController::PID(const double error, const double tolerance, const doub
     // Limit the maximum velocity simmetrically
     ctrl_cmd = std::clamp(kp * error, -max_vel, max_vel);
 
-    RCLCPP_INFO_STREAM(logger_, "PID cmd: " << error << " " << ctrl_cmd);
+    RCLCPP_DEBUG_STREAM(logger_, "PID cmd: " << error << " " << ctrl_cmd);
       
   }
 
   return ctrl_cmd;
 
 }
+
+double DexController::computeEndGoalHeadingError(const geometry_msgs::msg::Pose & current_pose, const geometry_msgs::msg::Pose & goal_pose){
+
+  tf2::Quaternion q_goal(goal_pose.orientation.x, goal_pose.orientation.y, goal_pose.orientation.z, goal_pose.orientation.w);
+  tf2::Quaternion q_curr(current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);
+
+  const auto current_heading = q_curr.getAngle() * q_curr.getAxis().z();
+
+  // Difference between two quaternions
+  auto q_diff = (q_goal * q_curr.inverse()).normalize();
+
+  return q_diff.getAngle() * q_diff.getAxis().z() - current_heading;
+
+}
+
+bool DexController::isEndGoal(const geometry_msgs::msg::Pose & goal_pose){
+  
+  std::lock_guard<std::mutex> mlock(mutex_);
+  const auto& end_goal = global_plan_.poses.back().pose;
+
+  return (fabs(end_goal.orientation.z - goal_pose.orientation.z) < 1e-5) &&
+        (fabs(end_goal.position.x - goal_pose.position.x) < 1e-5) &&
+        (fabs(end_goal.position.y - goal_pose.position.y) < 1e-5);
+  
+}
+
+
+
+
+
+
+
+
+
 void DexController::setSpeedLimit(const double & speed_limit, const bool & percentage) {}
 
 }  // namespace dex_controller

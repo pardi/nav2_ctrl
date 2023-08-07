@@ -113,7 +113,14 @@ public:
    * @param goal_pose to reach
   */
   double computeHeadingError(const geometry_msgs::msg::Pose & current_pose, const geometry_msgs::msg::Pose & goal_pose);
-   
+  
+  /**
+   * @brief Computes the error in heading from the end_goal target
+   * @param current_pose of the robot
+   * @param goal_pose to reach
+  */
+  double computeEndGoalHeadingError(const geometry_msgs::msg::Pose & current_pose, const geometry_msgs::msg::Pose & goal_pose);
+
   /**
    * @brief PID controller for moving the robot
    * @param error of the controller
@@ -123,6 +130,11 @@ public:
   */
   double PID(const double error, const double tolerance, const double kp, const double max_vel);
 
+  /**
+   * @brief Checkes whether the goal_pose is the end of the global path
+   * @param goal_pose to reach
+  */
+  bool isEndGoal(const geometry_msgs::msg::Pose & goal_pose);
 
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("DexController")};
