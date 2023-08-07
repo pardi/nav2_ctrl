@@ -217,6 +217,7 @@ bool DexController::isCollisionFree(const geometry_msgs::msg::Pose & initial_pos
   double dy = (goal_pose.position.y - initial_pose.position.y) / num_samples;;
   double dtheta = (goal_pose.orientation.z - initial_pose.orientation.z) / num_samples;
 
+  // Check the linear trajectory if the robot thrusts ahead
   if (cmd_vel.twist.linear.x > 0){
     
     for (int i = 0; i < num_samples; ++i){
@@ -226,6 +227,7 @@ bool DexController::isCollisionFree(const geometry_msgs::msg::Pose & initial_pos
     }
   }
 
+  // Check the angular trajectory if the robot spins
   if (cmd_vel.twist.angular.z > 0){
     
     for (int i = 0; i < num_samples; ++i){
