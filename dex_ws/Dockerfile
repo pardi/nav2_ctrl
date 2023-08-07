@@ -38,9 +38,17 @@ RUN apt-get install -y \
         ros-dev-tools && \
     rm -rf /var/lib/apt/lists/*
 
+RUN useradd -ms /bin/bash user \
+    && echo "user:user" | chpasswd \
+    && usermod -aG sudo user \
+    && echo 'user ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/user \
+    && usermod --uid 1000 user \
+    && usermod --gid 1000 user   
+
+USER user
 WORKDIR /
 
-RUN echo 'ALL ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
 RUN echo 'alias cb="colcon build --symlink-install"'  >> ~/.bashrc && \
     echo 'alias ros_source="source install/setup.bash"' >> ~/.bashrc 
 
