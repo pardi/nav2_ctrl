@@ -5,14 +5,6 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
-TEST(MyNodeTest, TestAddition) {
-
-  int result = 8;
-
-  EXPECT_EQ(result, 8);
-}
-
-
 TEST(DexControllerTest, pickGoal) {
 
   dex_controller::DexController dxc;
