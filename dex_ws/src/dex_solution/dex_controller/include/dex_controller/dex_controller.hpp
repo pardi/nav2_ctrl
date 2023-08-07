@@ -92,9 +92,19 @@ public:
    */
   void setSpeedLimit(const double & speed_limit, const bool & percentage) override;
 
+  /**
+   * @brief Selects the next local goal from the global plan
+   * @param lookahead Defines the distance between the selected goal and the current position
+   * @param current_pose Defines the current pose of the robot
+   */
+  geometry_msgs::msg::Pose pickGoal(const double lookahead, const geometry_msgs::msg::Pose & current_pose);
+
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("DexController")};
   nav_msgs::msg::Path global_plan_;
+
+
+  std::mutex mutex_;
 };
 
 }  // namespace dex_controller
