@@ -25,6 +25,8 @@ Simply,
 - **kp_ang** -> proportional gain for the angular controller
 - **kp_lin** -> proportional gain for the linear controller
 - **granularity** -> granularity of the collision detection algorithm
+- **stuck_thr** -> threshold to detect when the robot got stuck
+
 
 
 # Extra notes
