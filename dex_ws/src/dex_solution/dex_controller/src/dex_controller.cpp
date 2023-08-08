@@ -66,7 +66,9 @@ geometry_msgs::msg::TwistStamped DexController::computeVelocityCommands(
 
   geometry_msgs::msg::TwistStamped cmd_vel;
 
-  // Is the robot stuck?
+  // Is the robot stuck? 
+  // N.B. The robot is considered stuck if it doesn't move over a given period of time.
+  // More complicated cases e.g. caging, are not considered
 
   // Check state
   if (isStuck(velocity)){
@@ -155,9 +157,12 @@ double DexController::computeHeadingError(const geometry_msgs::msg::Pose & curre
   const auto dy = goal_pose.position.y - current_pose.position.y;
 
   // Compute angle for the desired heading
-  return std::atan2(dy, dx) - current_heading;
+  auto angle = std::atan2(dy, dx) - current_heading;
+
+  return angle;
 
 }
+
 
 double DexController::computeTranslationError(const geometry_msgs::msg::Pose & current_pose, const geometry_msgs::msg::Pose & goal_pose){
 
@@ -201,8 +206,6 @@ double DexController::computeEndGoalHeadingError(const geometry_msgs::msg::Pose 
   if (angle > M_PI) {
     angle = 2.0 * M_PI - angle;
   }
-
-  RCLCPP_INFO_STREAM(logger_, "angle: " << angle);
 
   return angle;
 
